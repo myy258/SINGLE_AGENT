@@ -1,8 +1,6 @@
 # 单 Agent 系统：直接用 create_react_agent 挂载所有工具，无 supervisor 无 worker
-
 """
 架构（极简）：
-
     用户输入 ─► SingleAgent.arun ─► create_react_agent (ReAct 循环)
                      │                     │
                      │            所有工具（write_file / python_exec /
