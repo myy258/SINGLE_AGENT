@@ -1,4 +1,3 @@
-# 单 Agent 系统：直接用 create_react_agent 挂载所有工具，无 supervisor 无 worker
 """
 架构（极简）：
     用户输入 ─► SingleAgent.arun ─► create_react_agent (ReAct 循环)
@@ -32,9 +31,6 @@ from skills.skill_loader import format_skill_index_for_prompt
 
 
 SINGLE_AGENT_MAX_STEPS: int = 20
-
-# 留给 Cortex claude-sonnet-4-5（200K token context）的安全余量：
-# 按 4 字符≈1 token 估算，预留 system prompt / 工具定义 / 输出空间后的警戒线
 SAFE_INPUT_CHAR_LIMIT: int = 600_000
 
 # 模型经由 Bedrock 调用，偶发会在一轮里并行发起多个工具调用导致
