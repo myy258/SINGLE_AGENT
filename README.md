@@ -74,9 +74,7 @@ SINGLE_AGENT/
 
 ## 8. LLM 后端
 
-二选一（`config.LLM_BACKEND`）：`ollama`（本地 qwen2.5:7b）/ `dashscope`
-（qwen3.5-27b）。
-DashScope/Snowflake 分支设 `max_tokens=16000`、`max_retries=3`、`timeout=120`。
+可导入本地模型或者通过API使用外部模型。
 
 ## 9. 会话记忆与日志
 
