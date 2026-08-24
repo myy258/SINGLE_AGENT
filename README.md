@@ -99,6 +99,7 @@ cd SINGLE_AGENT && python main.py
 - RAM 64.0 GB
 - NVIDIA Quadro P4000
 
-## 备注
+## 13. 备注
 
-⚠️ 提醒：仅供学习使用
+供交流学习使用，点击查看 LICENSE 文件
+
