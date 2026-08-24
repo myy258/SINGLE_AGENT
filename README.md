@@ -70,7 +70,7 @@ SINGLE_AGENT/
 - **Hybrid**：RRF 融合两者，覆盖最广，默认推荐；知识库小且偏关键词查询时可单用 BM25
 
 链路：`embedder.py` → `retriever.py` → `knowledge_base.py` → `rag_tool.py`
-（暴露为 `search_local_knowledge_base`）。控制台只打印一行 `[RAG] 正在检索...`。
+（暴露为 `search_local_knowledge_base`）。
 
 ## 8. LLM 后端
 
@@ -78,8 +78,7 @@ SINGLE_AGENT/
 
 ## 9. 会话记忆与日志
 
-历史留最近 20 条（10 轮），超 60 万字符打印上下文警告。日志每对话一个 `.txt`，
-只记 `[USER]`/`[AGENT step=N]`/`[TOOL:xxx]`（仅参数）/`[TURN_END]`，不落地结果内容。
+历史留最近 20 条（10 轮），超 60 万字符打印上下文警告。
 
 ## 10. 硬上限
 
