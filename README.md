@@ -41,7 +41,7 @@ SINGLE_AGENT/
 - **本地工具**：write_file、python_exec（首选）、run_python_script、calculator、
   current_time、baidu_search、search_local_knowledge_base
 - **技能工具**：`load_skill(name)` 按需加载某技能完整指引
-- **回滚工具**：`list_backups` / `rollback(id)`（见 §6）
+- **回滚工具**：`list_backups` / `rollback(id)`
 - **Git 工具**：`git_command`，子命令白名单，变更类需审核；自带合并冲突检查、
   pull/merge 前自动打安全 tag、拒绝 `--allow-unrelated-histories`
 - **MCP 文件系统工具**（npx 拉起）：read/list/search/get_file_info 等只读，加上
