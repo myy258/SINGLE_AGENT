@@ -1,4 +1,4 @@
-# 多 Agent 系统的全局配置：LLM 后端选择、Snowflake/DashScope/Ollama 参数、RAG 开关、路径白名单
+
 """
 只改这一个文件即可切换 LLM 后端 / 调整路径 / 打开关闭 RAG。
 
@@ -14,8 +14,7 @@ from pathlib import Path
 # ── LLM 后端选择 ─────────────────────────────────────────────────────────
 # "ollama"     : 本地 Ollama 服务
 # "dashscope"  : 阿里云 Qwen API
-# "snowflake"  : Snowflake Cortex REST API（云端 LLM，OpenAI 兼容协议）
-LLM_BACKEND: str = "snowflake"
+LLM_BACKEND: str = "dashscope"
 
 # Ollama 模型名（LLM_BACKEND="ollama" 时生效）
 OLLAMA_MODEL: str = "qwen3.6-27b"
@@ -27,17 +26,6 @@ DASHSCOPE_BASE_URL: str = ""
 
 # DashScope API Key
 DASHSCOPE_API_KEY: str = ""
-
-# ── Snowflake Cortex 配置（LLM_BACKEND="snowflake" 时生效）─────────────────
-# 模型名可选：claude-sonnet-4-5、llama3.1-70b、mistral-large2 等，
-# 具体以账号所在区域支持的模型列表为准。
-SNOWFLAKE_MODEL: str = "claude-sonnet-4-5"
-# 账号地址，形如 https://<account-identifier>.snowflakecomputing.com
-SNOWFLAKE_ACCOUNT_URL: str = ""
-# Programmatic Access Token（PAT），在 Snowsight 用户设置里生成。
-# 建议用环境变量 SNOWFLAKE_PAT 传入，避免把密钥写进代码。
-SNOWFLAKE_PAT: str = ""
-
 
 # ── 用户没指定路径时的默认工作目录 ─────────────────────────────────────
 # 比如用户说"创建 hello.txt"（没说目录），就放到这里。
