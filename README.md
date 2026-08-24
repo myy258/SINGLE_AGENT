@@ -101,5 +101,5 @@ cd SINGLE_AGENT && python main.py
 
 ## 13. 备注
 
-供交流学习使用，点击查看 LICENSE 文件
+供交流学习使用，点击查看 [`LICENSE`](LICENSE) 文件
 
