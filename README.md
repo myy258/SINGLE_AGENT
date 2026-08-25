@@ -45,7 +45,7 @@ SINGLE_AGENT/
 - **Git 工具**：`git_command`，子命令白名单，变更类需审核；自带合并冲突检查、
   pull/merge 前自动打安全 tag、拒绝 `--allow-unrelated-histories`
 - **MCP 文件系统工具**（npx 拉起）：read/list/search/get_file_info 等只读，加上
-  create_directory/edit_file/move_file（需审核+自动备份）
+  create_directory/edit_file/move_file
 
 ## 5. 技能包
 
