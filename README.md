@@ -2,7 +2,7 @@
 
 ## 1. 定位
 
-部署本地agent：写代码、跑分析、写作、翻译、常识问答、联网搜索、本地知识库检索、文件读写。
+部署本地agent：写和跑代码（主python）、跑分析、写作、翻译、常识问答、联网搜索、本地知识库检索、文件读写。
 
 ## 2. 架构
 
@@ -36,7 +36,7 @@ SINGLE_AGENT/
 > 始终在 `SINGLE_AGENT/` 目录下 `python main.py` 启动，模块间用绝对导入
 > （如 `from tools.confirm import confirm_action`）。改代码要同步整个文件夹。
 
-## 4. 工具集
+## 4. Tool集
 
 - **本地工具**：write_file、python_exec（首选）、run_python_script、calculator、
   current_time、baidu_search、search_local_knowledge_base
@@ -47,7 +47,7 @@ SINGLE_AGENT/
 - **MCP 文件系统工具**（npx 拉起）：read/list/search/get_file_info 等只读，加上
   create_directory/edit_file/move_file
 
-## 5. 技能包
+## 5. Agent Skills
 
 - `skills/*.md`，frontmatter 含 `name` + `description`；启动时目录常驻 prompt，
   正文按需 `load_skill` 注入
@@ -62,15 +62,12 @@ SINGLE_AGENT/
   `rollback(id)` 可反向恢复。保留策略：同路径≤5条，总量≤200条，超出淘汰最旧
 - 覆盖范围不含 `python_exec`/`run_python_script`（任意代码不可控）；Git 有独立安全网
 
-## 7. RAG 本地知识库
+## 7. 自搭建RAG 本地知识库
 
 `texts/*.txt` 段落切 chunk，三种检索模式（默认 hybrid）：
 - **Dense**：语义相近/同义词匹配强，依赖 embedding 模型，对专有名词不敏感
 - **BM25**：关键词/专有名词匹配准、快，不理解语义
 - **Hybrid**：RRF 融合两者，覆盖最广，默认推荐；知识库小且偏关键词查询时可单用 BM25
-
-链路：`embedder.py` → `retriever.py` → `knowledge_base.py` → `rag_tool.py`
-（暴露为 `search_local_knowledge_base`）。
 
 ## 8. LLM 后端
 
