@@ -31,6 +31,9 @@ from skills.skill_loader import format_skill_index_for_prompt
 
 
 SINGLE_AGENT_MAX_STEPS: int = 20
+
+# 留给 Cortex claude-sonnet-4-5（200K token context）的安全余量：
+# 按 4 字符≈1 token 估算，预留 system prompt / 工具定义 / 输出空间后的警戒线
 SAFE_INPUT_CHAR_LIMIT: int = 600_000
 
 # 模型经由 Bedrock 调用，偶发会在一轮里并行发起多个工具调用导致
@@ -64,7 +67,7 @@ def _get_model_identity() -> str:
 
 def _build_system_prompt(model_identity: str) -> str:
     return f"""\
-你是基于 {model_identity} 的中文智能助手。你能独立完成多种任务：
+你是基于 {model_identity} 的智能助手。你能独立完成多种任务：
 写代码、跑分析、写作、翻译、常识问答、联网搜索、本地知识库检索、文本文件读写等。
 
 【工具使用准则】
@@ -107,8 +110,12 @@ def _build_system_prompt(model_identity: str) -> str:
 【默认工作目录】
 {get_default_work_dir()}
 
-【回答语言】
-一律用中文。
+【回答语言（自动跟随）】
+根据用户最近这一条消息使用的语言来回答：
+- 用户用中文提问 → 用中文回答
+- 用户用英文提问 → 用英文回答
+- 语言不明确、中英混用，或消息只是代码/数字等无法判断语言时 → 默认用中文回答
+每一轮独立判断，不要被上一轮的语言"锁定"；同一轮回答内不要中英文混杂。
 """
 
 

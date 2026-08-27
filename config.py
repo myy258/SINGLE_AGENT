@@ -14,11 +14,11 @@ from pathlib import Path
 # ── LLM 后端选择 ─────────────────────────────────────────────────────────
 # "ollama"     : 本地 Ollama 服务
 # "dashscope"  : 阿里云 Qwen API
-LLM_BACKEND: str = "dashscope"
+LLM_BACKEND: str = "ollama"
 
 # Ollama 模型名（LLM_BACKEND="ollama" 时生效）
 OLLAMA_MODEL: str = "qwen3.6-27b"
-OLLAMA_BASE_URL: str = ""
+OLLAMA_BASE_URL: str = "http://localhost:11434"
 
 # DashScope 模型名（LLM_BACKEND="dashscope" 时生效）
 DASHSCOPE_MODEL: str = "qwen3.5-27b"
@@ -26,6 +26,12 @@ DASHSCOPE_BASE_URL: str = ""
 
 # DashScope API Key
 DASHSCOPE_API_KEY: str = ""
+
+# ── Snowflake Cortex 配置（LLM_BACKEND="snowflake" 时生效）─────────────────
+SNOWFLAKE_MODEL: str = "claude-sonnet-4-5"
+SNOWFLAKE_ACCOUNT_URL: str = ""
+SNOWFLAKE_PAT: str = ""
+
 
 # ── 用户没指定路径时的默认工作目录 ─────────────────────────────────────
 # 比如用户说"创建 hello.txt"（没说目录），就放到这里。
@@ -40,6 +46,14 @@ ALLOWED_DIRS: list[str] = [
     str(Path(os.path.expanduser("~"))),
 ]
 
+# ── 界面显示语言 ───────────────────────────────────────────────────────────
+# 注意：这个只控制命令行界面的文案（提示符、启动横幅、错误提示等），
+# 跟 AI 的回答语言无关——AI 回答语言是自动跟随用户每一条消息的输入语言判断的
+# （中文提问用中文答，英文提问用英文答），不受此项或 lang 命令影响。
+# "zh" : 界面显示中文（默认）
+# "en" : 界面显示 English
+# 运行时可在命令行输入 "lang en" / "lang zh" 随时切换，这里只是启动默认值。
+DEFAULT_LANGUAGE: str = "en"
 
 # ── RAG 开关 ──────────────────────────────────────────────────────────────
 # 关掉后 rag_tool 不会被加载，其它工具/专员不受影响。

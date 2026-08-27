@@ -1,5 +1,5 @@
 # Git 版本管理工具：受限子命令白名单 + 冲突/历史安全检查 + 变更类操作前人工审核
-
+# Co-authored with CoCo
 
 """
 只支持有限的 git 子命令，防止模型拼出任意危险命令；
@@ -18,6 +18,10 @@ add/commit/push/pull/tag/checkout/init/clone 这类会改变仓库状态或远�
    避免本地改动和远程改动混在一起更容易冲突。
 4. 拒绝在 pull/merge 里传 --allow-unrelated-histories，这个参数专门用来强行合并
    两段完全不相关的历史，几乎必然产生大量冲突，不允许模型自己决定用这个。
+5. 上面 1/3 两条检查如果自身执行失败（比如 git status 报错），不会当成"没问题"
+   静默放行，而是直接拒绝执行并提示用户手动核实。
+6. push 命令带 --force/-f/--force-with-lease 时，人工审核的确认摘要里会追加醒目
+   警告，提醒这会覆盖远程历史且不可撤销。
 """
 
 import subprocess
@@ -29,12 +33,12 @@ from tools.confirm import confirm_action
 
 _ALLOWED_SUBCOMMANDS = {
     "status", "diff", "log", "branch", "remote",
-    "add", "commit", "push", "pull", "tag", "checkout", "init", "clone", "reset",
+    "add", "commit", "push", "pull", "tag", "checkout", "init", "clone", "reset", "merge",
 }
 
 # 会改变仓库状态/远程内容的子命令：执行前必须人工审核确认
 _MUTATING_SUBCOMMANDS = {
-    "add", "commit", "push", "pull", "tag", "checkout", "init", "clone", "reset",
+    "add", "commit", "push", "pull", "tag", "checkout", "init", "clone", "reset", "merge",
 }
 
 # 会把远程内容合并进本地工作区的子命令：需要额外的冲突/历史安全检查
@@ -45,6 +49,9 @@ _UNMERGED_STATUS_CODES = {"UU", "AA", "DD", "AU", "UA", "UD", "DU"}
 
 _DANGEROUS_FLAGS = {"--allow-unrelated-histories"}
 
+# push 时会强行覆盖远程历史的高危参数：不拦截执行，但确认框里必须醒目提示
+_FORCE_PUSH_FLAGS = {"--force", "-f", "--force-with-lease"}
+
 
 def _run_git(parts: list[str], cwd: str, timeout: int = 30):
     return subprocess.run(
@@ -53,25 +60,29 @@ def _run_git(parts: list[str], cwd: str, timeout: int = 30):
     )
 
 
-def _get_unmerged_paths(cwd: str) -> list[str]:
-    """返回当前有未解决合并冲突的文件路径列表（空列表=没有冲突）。"""
+def _get_unmerged_paths(cwd: str) -> tuple[list[str] | None, bool]:
+    """返回 (未解决合并冲突的文件路径列表, 检查是否失败)。
+    检查本身失败时返回 (None, True)，调用方必须把"无法确认"如实告知用户，
+    不能当成"没有冲突"直接放行。
+    """
     try:
         proc = _run_git(["status", "--porcelain"], cwd)
     except Exception:
-        return []
+        return None, True
     unmerged = []
     for line in proc.stdout.splitlines():
         if len(line) >= 2 and line[:2] in _UNMERGED_STATUS_CODES:
             unmerged.append(line[3:].strip())
-    return unmerged
+    return unmerged, False
 
 
-def _is_working_tree_clean(cwd: str) -> bool:
+def _is_working_tree_clean(cwd: str) -> tuple[bool | None, bool]:
+    """返回 (是否干净, 检查是否失败)。检查本身失败时返回 (None, True)。"""
     try:
         proc = _run_git(["status", "--porcelain"], cwd)
     except Exception:
-        return True  # 查不到就不拦，避免因为检查本身失败卡死正常流程
-    return proc.stdout.strip() == ""
+        return None, True
+    return proc.stdout.strip() == "", False
 
 
 def _make_safety_tag(cwd: str) -> str | None:
@@ -88,7 +99,7 @@ def _make_safety_tag(cwd: str) -> str | None:
 def git_command(git_args: str, cwd: str = ".") -> str:
     """在指定目录下执行 git 命令，用于版本管理和发布（提交代码、推送、打 tag 等）。
     只支持部分子命令：status / diff / log / branch / remote / add / commit / push /
-    pull / tag / checkout / init / clone / reset。不支持的子命令会被拒绝。
+    pull / tag / checkout / init / clone / reset / merge。不支持的子命令会被拒绝。
 
     Args:
         git_args: git 子命令及参数（不要带 "git" 前缀），例如：
@@ -115,7 +126,12 @@ def git_command(git_args: str, cwd: str = ".") -> str:
 
     # ── add/commit 前：硬性检查是否存在未解决的合并冲突 ──────────────────
     if subcmd in ("add", "commit"):
-        unmerged = _get_unmerged_paths(cwd)
+        unmerged, check_failed = _get_unmerged_paths(cwd)
+        if check_failed:
+            return (
+                "操作被拒绝：未能确认当前是否存在未解决的合并冲突（git status 执行异常），"
+                "为安全起见不会自动 add/commit。请手动执行 git status 核实工作区状态后再重试。"
+            )
         if unmerged:
             return (
                 "操作被拒绝：检测到以下文件存在未解决的合并冲突（git status 里状态是 "
@@ -128,7 +144,13 @@ def git_command(git_args: str, cwd: str = ".") -> str:
     # ── pull/merge 前：工作区必须干净 + 自动打安全快照 ──────────────────
     safety_tag = None
     if subcmd in _MERGE_LIKE_SUBCOMMANDS:
-        if not _is_working_tree_clean(cwd):
+        is_clean, check_failed = _is_working_tree_clean(cwd)
+        if check_failed:
+            return (
+                "操作被拒绝：未能确认工作区是否干净（git status 执行异常），"
+                "为安全起见不会自动 pull/merge。请手动执行 git status 核实后再重试。"
+            )
+        if not is_clean:
             return (
                 "操作被拒绝：工作区有未提交的本地改动，不能直接 pull/merge。"
                 "请先 commit 这些改动，或明确告知要放弃它们后再重试。"
@@ -144,6 +166,12 @@ def git_command(git_args: str, cwd: str = ".") -> str:
             )
             if safety_tag:
                 summary += f"\n已自动打安全快照 tag：{safety_tag}（出问题可用它恢复）。"
+        if subcmd == "push" and any(flag in _FORCE_PUSH_FLAGS for flag in parts):
+            summary += (
+                "\n🚨 检测到强制推送参数（--force/-f/--force-with-lease）：这会"
+                "覆盖远程分支的历史记录，可能导致他人的提交丢失，且无法撤销，"
+                "请务必确认这确实是你想要的操作。"
+            )
         if not confirm_action(summary):
             return f"操作已被用户拒绝：未执行 git {git_args}。"
 
