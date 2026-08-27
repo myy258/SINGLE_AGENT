@@ -1,6 +1,6 @@
 # 本地 Agent 系统介绍
 
-**[English](README_en.md) | 简体中文（当前）**
+**[English](README_en.md) | 简体中文**
 
 ## 1. 定位
 

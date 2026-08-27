@@ -1,6 +1,6 @@
 # Local Agent System Overview
 
-**English (current) | [简体中文](README.md)**
+**English | [简体中文](README.md)**
 
 ## 1. Positioning
 
