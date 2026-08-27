@@ -1,6 +1,8 @@
 # 本地 Agent 系统介绍
 
-**[English](README_en.md) | 简体中文**
+<p align="center">
+  <b><a href="README_en.md">English</a> | 中文</b>
+</p>
 
 ## 1. 定位
 
