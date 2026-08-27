@@ -1,6 +1,8 @@
 # Local Agent System Overview
 
-**English | [简体中文](README.md)**
+<p align="center">
+  <b>English | <a href="README.md">Chinese</a></b>
+</p>
 
 ## 1. Positioning
 
