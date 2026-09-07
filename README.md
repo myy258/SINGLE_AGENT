@@ -27,22 +27,51 @@
 
 ```
 SINGLE_AGENT/
-├── main.py / agent.py / config.py     # 入口 / Agent 类 / 后端与路径配置
-├── core/        llm.py（LLM 工厂） logger.py（会话日志）
-├── tools/       local_tools.py mcp_setup.py git_tool.py rollback.py confirm.py
-├── rag/         embedder.py retriever.py knowledge_base.py rag_tool.py
-├── skills/      skill_loader.py + 各技能 .md（代码加注释/翻译/Git版本管理与发布）
-├── texts/       本地知识库文档
-└── backups/ logs/
+├── main.py               # 命令行交互入口
+├── config.py             # LLM 后端选择 + RAG 开关 + 路径白名单
+├── agent.py              # SingleAgent 类（create_react_agent）
+│
+├── core/                 # agent 运行的底层引擎
+│   ├── llm.py             # 三后端 LLM 工厂
+│   ├── logger.py          # 会话日志
+│   ├── events.py          # 事件汇抽象（CLI 下 no-op，Web 层注入实现）
+│   ├── checkpointer.py    # 会话历史持久化（LangGraph SqliteSaver）
+│   ├── paths.py           # 路径解析 + ALLOWED_DIRS 白名单收口
+│   ├── code_guard.py      # python_exec 的 AST 静态检查
+│   └── safe_eval.py       # calculator 的 AST 白名单求值
+│
+├── tools/                # 挂载给 agent 的工具实现
+│   ├── local_tools.py     # 本地工具
+│   ├── mcp_setup.py       # MCP filesystem server 接入 + 截断/审核/备份包装
+│   ├── git_tool.py        # Git 版本管理
+│   ├── rollback.py        # 操作回滚
+│   └── confirm.py         # 终端阻塞式人工审核
+│
+├── rag/                  # 本地知识库检索
+│   ├── embedder.py         # BGE-small-zh 中文向量化
+│   ├── retriever.py        # Dense / BM25 / Hybrid 检索器
+│   ├── knowledge_base.py   # 加载 texts/ 下 .txt 并段落切 chunk
+│   └── rag_tool.py         # search_local_knowledge_base 工具
+│
+├── skills/               # 技能加载器 + 技能内容放在一起
+│   ├── skill_loader.py     # 扫描 skills/*.md，暴露 load_skill 工具
+│   ├── 代码加注释.md
+│   ├── 翻译.md
+│   └── Git版本管理与发布.md
+│
+├── texts/                # 本地知识库文档
 
 ```
 
-> 始终在 `SINGLE_AGENT/` 目录下 `python main.py` 启动，模块间用绝对导入
-> （如 `from tools.confirm import confirm_action`）。改代码要同步整个文件夹。
+> `core/`、`tools/`、`rag/`、`skills/` 都是普通 Python package（各自有 `__init__.py`）。
+> 项目始终以 `python main.py`（在 `SINGLE_AGENT/` 目录下）启动，`sys.path[0]` 会是
+> `SINGLE_AGENT/` 本身，所以子包内部可以用 `from tools.confirm import confirm_action`
+> 这种绝对导入互相引用，`config.py`/`agent.py` 留在根目录的模块也能被子包直接
+> `from config import ...` 引用，不需要相对导入。
 
 ## 4. Tool集
 
-- **本地工具**：write_file、python_exec（首选）、run_python_script、calculator、
+- **本地工具**：write_file、python_exec、run_python_script、calculator、
   current_time、baidu_search、search_local_knowledge_base
 - **技能工具**：`load_skill(name)` 按需加载某技能完整指引
 - **回滚工具**：`list_backups` / `rollback(id)`
@@ -57,36 +86,23 @@ SINGLE_AGENT/
   正文按需 `load_skill` 注入
 - 新增技能只需加一个 `.md`，无需改代码，`skill_loader.py` 自动扫描
 
-## 6. 写入类操作的安全机制
-
-- **人工审核**（`confirm.py`）：写入/编辑/删除类工具执行前打印摘要，阻塞等待 y/n，
-  拒绝则不执行
-- **自动回滚**（`rollback.py`）：审核通过后先备份旧状态（写/编辑存旧内容，移动记录
-  原路径，建目录记"新建"），存入 `backups/manifest.json` + `<id>.bak`；
-  `rollback(id)` 可反向恢复。保留策略：同路径≤5条，总量≤200条，超出淘汰最旧
-- 覆盖范围不含 `python_exec`/`run_python_script`（任意代码不可控）；Git 有独立安全网
-
-## 7. 自搭建RAG 本地知识库
+## 6. 自搭建RAG 本地知识库
 
 `texts/*.txt` 段落切 chunk，三种检索模式（默认 hybrid）：
 - **Dense**：语义相近/同义词匹配强，依赖 embedding 模型，对专有名词不敏感
 - **BM25**：关键词/专有名词匹配准、快，不理解语义
 - **Hybrid**：RRF 融合两者，覆盖最广，默认推荐；知识库小且偏关键词查询时可单用 BM25
 
-## 8. LLM 后端
+## 7. LLM 后端
 
 可导入本地模型或者通过API使用外部模型。受硬件配置限制，本地只能使用27b以下的模型，如qwen2.5-7b能流畅跑起来，qwen3.6-27b效率会变慢。
 
-## 9. 会话记忆与日志
-
-历史留最近 20 条（10 轮），超 60 万字符打印上下文警告。
-
-## 10. 硬上限
+## 8. 硬上限
 
 ReAct ≤20 步（递归上限 44）；MCP 单次读取 ≤4万字符自动截断；输入≈60万字符预警；
 回滚记录同路径≤5条/总量≤200条。
 
-## 11. 运行
+## 9. 运行
 
 ```bash
 cd SINGLE_AGENT && python main.py
